@@ -62,11 +62,10 @@ export default class MoviesDAO {
       // here is only included to avoid sending 46000 documents down the
       // wire.
 
-      cursor = await movies
-        .find(
-          { countries: { $in: [...countries] } },
-          { projection: { title: 1 } },
-        )
+      cursor = await movies.find(
+        { countries: { $in: [...countries] } },
+        { projection: { title: 1 } },
+      )
     } catch (e) {
       console.error(`Unable to issue find command, ${e}`)
       return []
@@ -116,12 +115,10 @@ export default class MoviesDAO {
     Given an array of one or more genres, construct a query that searches
     MongoDB for movies with that genre.
     */
-
     const searchGenre = Array.isArray(genre) ? genre : genre.split(", ")
-
     // TODO Ticket: Text and Subfield Search
     // Construct a query that will search for the chosen genre.
-    const query = {}
+    const query = { genres: { $in: searchGenre } }
     const project = {}
     const sort = DEFAULT_SORT
 
@@ -195,12 +192,13 @@ export default class MoviesDAO {
     The queryPipeline is a Javascript array, so you can use push() or concat()
     to complete this task, but you might have to do something about `const`.
     */
-
+    const stages = [skipStage, limitStage, facetStage]
     const queryPipeline = [
       matchStage,
       sortStage,
       // TODO Ticket: Faceted Search
       // Add the stages to queryPipeline in the correct order.
+      ...stages,
     ]
 
     try {
@@ -248,6 +246,7 @@ export default class MoviesDAO {
         .find(query)
         .project(project)
         .sort(sort)
+        .skip(page * moviesPerPage)
     } catch (e) {
       console.error(`Unable to issue find command, ${e}`)
       return { moviesList: [], totalNumMovies: 0 }
