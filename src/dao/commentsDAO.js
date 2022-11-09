@@ -46,7 +46,12 @@ export default class CommentsDAO {
       // TODO Ticket: Create/Update Comments
       // Construct the comment document to be inserted into MongoDB.
       const { email } = user
-      const commentDoc = { movie_id: ObjectId(movieId), email, text: comment, date }
+      const commentDoc = {
+        movie_id: ObjectId(movieId),
+        email,
+        text: comment,
+        date,
+      }
 
       return await comments.insertOne(commentDoc)
     } catch (e) {
@@ -97,6 +102,7 @@ export default class CommentsDAO {
       // Use the userEmail and commentId to delete the proper comment.
       const deleteResponse = await comments.deleteOne({
         _id: ObjectId(commentId),
+        email: userEmail,
       })
 
       return deleteResponse
@@ -117,11 +123,28 @@ export default class CommentsDAO {
     try {
       // TODO Ticket: User Report
       // Return the 20 users who have commented the most on MFlix.
-      const pipeline = []
+      const pipeline = [
+        {
+          $group: {
+            _id: "$email",
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+        {
+          $limit: 20,
+        },
+      ]
 
       // TODO Ticket: User Report
       // Use a more durable Read Concern here to make sure this data is not stale.
-      const readConcern = comments.readConcern
+      const readConcern = { level: "majority" }
 
       const aggregateResult = await comments.aggregate(pipeline, {
         readConcern,
